@@ -96,9 +96,14 @@ jobs:
           # ★追加：バリデーション通過用に必要
           anthropic_api_key: ${{ secrets.ZAI_API_KEY }}
 
-          # 日本語固定（デフォルトの内部 system prompt を潰さないよう append を使う）
+          # 日本語固定 + Agent Teams 実行ルール（デフォルトの内部 system prompt を潰さないよう append を使う）
           claude_args: |
-            --append-system-prompt "回答は日本語で書いてください（コードブロック内のコード、コマンド、ファイルパス、固有名詞はそのままで構いません）。"
+            --append-system-prompt "【最重要: 出力言語】以降の出力は日本語のみで書いてください。英語の文章、英語見出し、英語の箇条書き、英単語の混入を禁止します。例外はコードブロック内のコード、コマンド、ファイルパス、固有名詞（リポジトリ名やツール名など）です。"
+            --append-system-prompt "teammates 間の直接やりとり要約も日本語のみで書いてください。"
+            --append-system-prompt "【前提】Agent Teams を使ってください（subagents禁止）。teammateMode は in-process 前提です。"
+            --append-system-prompt "【協調要件（必須）】teammates 同士が最低1往復以上は直接やりとりし、相互にツッコミ/補足してから統合してください。teammates 間の直接やりとり要約を必ず出してください（誰が誰に何を言ったかを短く）。"
+            --append-system-prompt "【出力フォーマット（コメント先頭に必須。ここも日本語のみ）】Agent Teams 使用: はい/いいえ。teammateMode: in-process。スポーンした teammates: 役割 + 人数。証拠: teammates 間の直接やりとり要約。共有タスクリスト: 誰が何を担当し完了したか。"
+            --append-system-prompt "その後に、実装内容の概要・変更ファイル・テスト結果を日本語で簡潔に書いてください。"
 
         env:
           # Agent Teams (Experimental): CI では tmux が使えないので in-process を強制
