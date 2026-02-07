@@ -213,6 +213,74 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_dice_verify2
+
+シンプルなサイコロ CLI アプリケーション。
+
+### インストール
+
+Python 3.10 以上が必要です。
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/Sunwood-AI-OSS-Hub/SHIKIGAMI.git
+cd SHIKIGAMI
+```
+
+### 使い方
+
+#### 基本的な使い方
+
+```bash
+# 1回振る（デフォルト）
+python -m shikigami_dice_verify2
+# 出力例: 4
+
+# 3回振る
+python -m shikigami_dice_verify2 --rolls 3
+# 出力例: 2 5 1
+
+# シードを指定して再現可能な結果を得る
+python -m shikigami_dice_verify2 --seed 42 --rolls 5
+# 出力例: 6 1 3 2 4
+```
+
+#### オプション
+
+| オプション | 説明 | デフォルト値 |
+|-----------|-------------|-------------|
+| `--rolls K` | 振る回数 | `1` |
+| `--seed S` | 乱数シード（指定すると再現性あり） | なし（ランダム） |
+| `--help` | ヘルプを表示 | - |
+
+#### バリデーション
+
+`--rolls` に 0 以下の値を指定するとエラーになります：
+
+```bash
+python -m shikigami_dice_verify2 --rolls 0
+# エラー: --rolls は1以上の整数を指定してください（指定値: 0）
+```
+
+### テスト
+
+```bash
+# pytest をインストール
+pip install pytest
+
+# テストを実行
+pytest tests/
+```
+
+テスト項目：
+- seed指定時の決定性
+- rollsバリデーション
+- デフォルト挙動
+- 複数回振る場合
+- 出力形式
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
