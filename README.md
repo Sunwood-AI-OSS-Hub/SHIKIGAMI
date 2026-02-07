@@ -222,8 +222,8 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 このリポジトリをクローンしてください：
 
 ```bash
-git clone https://github.com/Sunwood-ai-labs/claude-glm-actions-lab.git
-cd claude-glm-actions-lab
+git clone https://github.com/Sunwood-AI-OSS-Hub/SHIKIGAMI.git
+cd SHIKIGAMI
 ```
 
 ### 使い方
