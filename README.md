@@ -213,6 +213,54 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_hello CLI
+
+A simple greeting CLI tool.
+
+### Quick Start
+
+```bash
+# Default greeting
+python -m shikigami_hello
+# Output: Hello, world
+
+# Greet a specific person
+python -m shikigami_hello --name Alice
+# Output: Hello, Alice
+```
+
+### Usage Examples
+
+| Command | Output |
+|---------|--------|
+| `python -m shikigami_hello` | `Hello, world` |
+| `python -m shikigami_hello --name Alice` | `Hello, Alice` |
+| `python -m shikigami_hello -n "Bob"` | `Hello, Bob` |
+| `python -m shikigami_hello -n "日本語"` | `Hello, 日本語` |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--name, -n TEXT` | The name to greet (default: "world") |
+| `--version` | Show version information |
+| `--help, -h` | Show help message and exit |
+
+### Features
+
+- Unicode support (emojis, international characters)
+- Input sanitization (removes control characters)
+- Max length validation (1000 characters)
+- Clear error messages
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

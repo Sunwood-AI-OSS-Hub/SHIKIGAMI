@@ -1,0 +1,11 @@
+[project]
+name = "shikigami-hello"
+version = "0.1.0"
+description = "A simple greeting CLI tool"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+shikigami-hello = "shikigami_hello.cli:main"
