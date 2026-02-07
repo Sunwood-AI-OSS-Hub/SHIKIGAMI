@@ -66,7 +66,9 @@ jobs:
 
           mkdir -p "$DEST_DIR"
           # Copy agents from the checked out remote repository into the runner's user directory.
-          cp -a "$SRC_DIR/." "$DEST_DIR/"
+          # NOTE: We intentionally do NOT copy settings.json to avoid teammateMode collisions
+          # (CI should use env var teammateMode=in-process).
+          cp -a "$SRC_DIR"/*.md "$DEST_DIR/"
           echo "Installed agents:"
           ls -la "$DEST_DIR"
 
@@ -96,14 +98,21 @@ jobs:
           # ★追加：バリデーション通過用に必要
           anthropic_api_key: ${{ secrets.ZAI_API_KEY }}
 
-          # 日本語固定（Issue/PR コメントの出力言語が英語に寄りがちなため強制）
-          claude_args: |
-            --system-prompt "あなたは必ず日本語で回答してください。英語での説明・見出し・箇条書きは禁止です（ただし、コードブロック内のコード、コマンド、ファイルパス、固有名詞はそのままで構いません）。チームメンバー間のやりとり要約も日本語で書いてください。"
-
         env:
           # Agent Teams (Experimental): CI では tmux が使えないので in-process を強制
           CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1"
           teammateMode: "in-process"
+          # Retry budget for transient provider/API failures (does not fix hangs by itself).
+          CLAUDE_CODE_MAX_RETRIES: "30"
+          # Append (not replace) system prompt to enforce Japanese output in CI.
+          # Keep this short and deterministic to reduce "wait for further instructions" behavior.
+          APPEND_SYSTEM_PROMPT: |
+            【最重要: 出力言語】
+            以降の出力は日本語のみとしてください。英語の文章、英語見出し、英語の箇条書き、英単語の混入を禁止します。
+            例外: コードブロック内のコード、コマンド、ファイルパス、固有名詞はそのままで構いません。
+
+            【終了条件】
+            タスク完了後は追加の指示を待たずに必ず終了してください。
           LANG: "ja_JP.UTF-8"
           LC_ALL: "ja_JP.UTF-8"
           # GLMに向ける設定
