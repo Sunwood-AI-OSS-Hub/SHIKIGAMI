@@ -97,6 +97,9 @@ jobs:
           anthropic_api_key: ${{ secrets.ZAI_API_KEY }}
 
         env:
+          # Agent Teams (Experimental): CI では tmux が使えないので in-process を強制
+          CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1"
+          teammateMode: "in-process"
           # GLMに向ける設定
           ANTHROPIC_BASE_URL: https://api.z.ai/api/anthropic
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ZAI_API_KEY }}
