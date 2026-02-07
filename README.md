@@ -19,6 +19,13 @@
   </a>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/lang-Japanese-blue" alt="Japanese"/>
+  <a href="#english">
+    <img src="https://img.shields.io/badge/lang-English-green" alt="English"/>
+  </a>
+</p>
+
 ## Overview
 
 Claude Code GitHub Actions with GLM API integration laboratory. This repository contains workflows and configurations for using Claude Code with GLM (General Language Model) API in GitHub Actions.
@@ -275,6 +282,74 @@ $ python -m shikigami_hello --help
 shikigami_hello/
 ├── __init__.py       # パッケージ初期化ファイル
 └── __main__.py       # CLIエントリーポイント
+```
+
+---
+
+<a id="english"></a>
+
+## shikigami_hello CLI (English)
+
+`shikigami_hello` is a simple greeting CLI application.
+
+### Installation
+
+Clone this repository:
+
+```bash
+git clone https://github.com/Sunwood-AI-OSS-Hub/SHIKIGAMI.git
+cd SHIKIGAMI
+```
+
+### Usage
+
+#### Basic Usage
+
+```bash
+# Default greeting (Hello, world)
+python -m shikigami_hello
+
+# Greet with a specific name
+python -m shikigami_hello --name Alice
+
+# Use short option
+python -m shikigami_hello -n Bob
+```
+
+#### Options
+
+| Option | Short | Description | Default |
+|-----------|--------|------|-------------|
+| `--name` | `-n` | Name to greet | `world` |
+| `--help` | `-h` | Show help message | - |
+
+#### Output Examples
+
+```bash
+$ python -m shikigami_hello
+Hello, world
+
+$ python -m shikigami_hello --name Alice
+Hello, Alice
+
+$ python -m shikigami_hello -n Bob
+Hello, Bob
+```
+
+#### Display Help
+
+```bash
+$ python -m shikigami_hello --help
+```
+
+### Development
+
+Package structure:
+
+```
+shikigami_hello/
+├── __init__.py       # Package initialization file
+└── __main__.py       # CLI entry point
 ```
 
 ---
