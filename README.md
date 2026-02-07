@@ -213,6 +213,35 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_hello CLI
+
+A simple Python CLI greeting application.
+
+### Usage
+
+```bash
+# Default greeting (outputs: Hello, world)
+python -m shikigami_hello
+
+# Custom name greeting (outputs: Hello, Alice)
+python -m shikigami_hello --name Alice
+```
+
+### Features
+
+- Simple CLI interface using argparse
+- Optional `--name` argument for custom greetings
+- Default greeting: "Hello, world"
+- Supports names with spaces and special characters
+
+### Running Tests
+
+```bash
+pytest shikigami_hello/tests/test_cli.py -v
+```
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
