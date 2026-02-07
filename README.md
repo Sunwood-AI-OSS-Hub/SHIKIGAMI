@@ -213,6 +213,72 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_hello CLI
+
+`shikigami_hello` はシンプルな挨拶CLIアプリケーションです。
+
+### インストール
+
+このリポジトリをクローンしてください：
+
+```bash
+git clone https://github.com/Sunwood-ai-labs/claude-glm-actions-lab.git
+cd claude-glm-actions-lab
+```
+
+### 使い方
+
+#### 基本的な使用方法
+
+```bash
+# デフォルトの挨拶（Hello, world）
+python -m shikigami_hello
+
+# 名前を指定して挨拶
+python -m shikigami_hello --name Alice
+
+# 短縮オプションを使用
+python -m shikigami_hello -n Bob
+```
+
+#### オプション
+
+| オプション | 短縮形 | 説明 | デフォルト値 |
+|-----------|--------|------|-------------|
+| `--name` | `-n` | 挨拶の対象となる名前 | `world` |
+| `--help` | `-h` | ヘルプメッセージを表示 | - |
+
+#### 出力例
+
+```bash
+$ python -m shikigami_hello
+Hello, world
+
+$ python -m shikigami_hello --name Alice
+Hello, Alice
+
+$ python -m shikigami_hello -n Bob
+Hello, Bob
+```
+
+#### ヘルプの表示
+
+```bash
+$ python -m shikigami_hello --help
+```
+
+### 開発
+
+`shikigami_hello` パッケージの構造：
+
+```
+shikigami_hello/
+├── __init__.py       # パッケージ初期化ファイル
+└── __main__.py       # CLIエントリーポイント
+```
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
