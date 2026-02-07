@@ -219,6 +219,60 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+## shikigami_dice - サイコロCLIアプリ
+
+シンプルなサイコロを振るCLIアプリケーションです。
+
+### 使い方
+
+```bash
+# 基本的な使い方（6面ダイスを1回振る）
+python -m shikigami_dice
+
+# オプションを指定
+python -m shikigami_dice --sides 20    # 20面ダイス
+python -m shikigami_dice --rolls 3     # 3回振る
+python -m shikigami_dice --seed 42     # シードを指定（再現性あり）
+
+# 組み合わせ
+python -m shikigami_dice --sides 10 --rolls 5 --seed 123
+```
+
+### オプション
+
+| オプション | 説明 | デフォルト値 |
+|-----------|-------------|-------------|
+| `--sides N` | ダイスの面数（2以上） | 6 |
+| `--rolls K` | 振る回数（1以上） | 1 |
+| `--seed S` | 乱数シード（省略可） | なし |
+
+### 出力例
+
+```bash
+$ python -m shikigami_dice
+4
+
+$ python -m shikigami_dice --sides 20 --rolls 3
+15 7 20
+
+$ python -m shikigami_dice --sides 6 --rolls 5 --seed 42
+3 6 1 5 4
+```
+
+### バリデーション
+
+不正な値を指定すると、エラーメッセージが表示され終了コード2で終了します。
+
+```bash
+$ python -m shikigami_dice --sides 1
+Error: sides must be >= 2, got 1
+
+Usage:
+  python -m shikigami_dice [--sides N] [--rolls K] [--seed S]
+```
+
+---
+
 ## Test
 
 This is a test PR to verify the auto review comment feature.
