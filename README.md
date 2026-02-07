@@ -213,6 +213,66 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_dice_ci - サイコロ CLI ツール
+
+シンプルなサイコロを振る Python CLI ツールです。
+
+### 使い方
+
+```bash
+# 基本使用（1回振る）
+python -m shikigami_dice_ci
+
+# 複数回振る
+python -m shikigami_dice_ci --rolls 3
+
+# seedを指定して再現性のある結果を得る
+python -m shikigami_dice_ci --rolls 5 --seed 42
+```
+
+### オプション
+
+| オプション | 説明 | デフォルト値 |
+|-----------|-------------|-------------|
+| `--rolls K` | サイコロを振る回数 | `1` |
+| `--seed S` | 乱数シード（指定時は再現性あり） | なし |
+
+### 出力
+
+K回分の結果をスペース区切りで1行に出力します。
+
+```bash
+$ python -m shikigami_dice_ci --rolls 3
+3 6 1
+
+$ python -m shikigami_dice_ci --rolls 5 --seed 42
+4 1 5 2 6
+```
+
+### バリデーション
+
+`--rolls` には1以上の整数を指定してください。0や負数を指定するとエラーになります。
+
+```bash
+$ python -m shikigami_dice_ci --rolls 0
+エラー: --rolls は1以上の整数を指定してください（指定された値: 0）
+
+使用方法:
+  python -m shikigami_dice_ci [--rolls K] [--seed S]
+
+オプション:
+  --rolls K   サイコロを振る回数（デフォルト: 1）
+  --seed S    乱数シード（指定時は再現性あり）
+```
+
+### テスト
+
+```bash
+pytest tests/test_dice.py -v
+```
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
