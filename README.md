@@ -223,6 +223,66 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 This is a test PR to verify the auto review comment feature.
 
+---
+
+## shikigami_dice2 - Dice Rolling CLI
+
+A simple dice rolling CLI application written in Python.
+
+### Installation
+
+No installation required - just use Python's module runner:
+
+```bash
+python -m shikigami_dice2
+```
+
+### Usage
+
+#### Basic Usage
+
+Roll a 6-sided die once (default):
+```bash
+python -m shikigami_dice2
+# Output: 3
+```
+
+#### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--sides N` | Number of sides on the dice | 6 |
+| `--rolls K` | Number of times to roll | 1 |
+| `--seed S` | Random seed for reproducibility | None |
+
+#### Examples
+
+Roll a 20-sided die 3 times:
+```bash
+python -m shikigami_dice2 --sides 20 --rolls 3
+# Output: 7 14 2
+```
+
+Use a seed for reproducible results:
+```bash
+python -m shikigami_dice2 --seed 42 --rolls 5
+# Output: 3 6 1 5 4
+```
+
+### Validation
+
+- `--sides` must be >= 2
+- `--rolls` must be >= 1
+
+Invalid inputs will exit with code 2 and display usage information.
+
+### Testing
+
+Run the test suite:
+```bash
+pytest tests/
+```
+
 _Made with ❤️ by [Sunwood AI Labs](https://github.com/Sunwood-ai-labs)_
 
 
