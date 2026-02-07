@@ -1,0 +1,193 @@
+name: CLAUDE_CODE_GLM_DEV
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [opened]
+
+# 同じIssue/PRでは同時に走らないようにする
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && (contains(github.event.comment.body, '@claude') || contains(github.event.comment.body, '@Claude') || contains(github.event.comment.body, '@CLAUDE'))) ||
+      (github.event_name == 'pull_request_review_comment' && (contains(github.event.comment.body, '@claude') || contains(github.event.comment.body, '@Claude') || contains(github.event.comment.body, '@CLAUDE'))) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.body, '@Claude') || contains(github.event.issue.body, '@CLAUDE'))) ||
+      github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    # デフォルト設定（必要に応じてオーバーライド可能）
+    env:
+      CREATE_AUTO_PR: "true"              # Issueからのトリガー時に自動でPRを作成するかどうか
+      INCLUDE_TASK_SUMMARY: "true"        # タスクサマリー（---より後ろの報告内容）を含めるかどうか
+      SOURCE_LOCATION: "remote"           # スクリプトのソース: local または remote
+      SOURCE_URL: "https://raw.githubusercontent.com/Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox/refs/heads/main/.github/scripts/create-pr.py"
+      LOCAL_PATH: '.github/scripts/create-pr.py'
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Checkout agents repository
+        uses: actions/checkout@v4
+        with:
+          repository: Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox
+          ref: main
+          fetch-depth: 1
+          path: .tmp/agents-repo
+
+      - name: Install Claude agents into user directory
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SRC_DIR=".tmp/agents-repo/.github/.claude/agents"
+          DEST_DIR="$HOME/.claude/agents"
+
+          if [[ ! -d "$SRC_DIR" ]]; then
+            echo "ERROR: Source agents directory not found: $SRC_DIR"
+            exit 1
+          fi
+
+          mkdir -p "$DEST_DIR"
+          # Copy agents from the checked out remote repository into the runner's user directory.
+          cp -a "$SRC_DIR/." "$DEST_DIR/"
+          echo "Installed agents:"
+          ls -la "$DEST_DIR"
+
+      # ★ここで「この実行が使うブランチ名」を決め打ちする
+      - name: Compute branch name
+        id: branch
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request_review_comment" ]] || [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "name=claude-glm-dev-pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=claude-glm-dev-issue-${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: anthropics/claude-code-action@v1
+        # Release-note issues often produce no git changes/branch, but the action can still
+        # fail when it later tries to compare a non-existent branch. Allow continuation so
+        # our "Create or Update Release" step can run.
+        continue-on-error: ${{ (github.event_name == 'issue_comment' || github.event_name == 'issues') && startsWith(github.event.issue.title, 'リリースノート生成:') }}
+        with:
+          trigger_phrase: "@claude"
+
+          # ★ブランチ名を固定（タイムスタンプなし）
+          branch_prefix: ""
+          branch_name_template: ${{ steps.branch.outputs.name }}
+
+          # ★追加：バリデーション通過用に必要
+          anthropic_api_key: ${{ secrets.ZAI_API_KEY }}
+
+        env:
+          # GLMに向ける設定
+          ANTHROPIC_BASE_URL: https://api.z.ai/api/anthropic
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ZAI_API_KEY }}
+          API_TIMEOUT_MS: "3000000"
+          ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.7"
+          ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7"
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air"
+          # When investigating intermittent failures, enable SDK stderr logs.
+          DEBUG_CLAUDE_AGENT_SDK: "1"
+          # gh CLI を使った Release 作成/更新に必要
+          GH_TOKEN: ${{ github.token }}
+
+      # リリースノート生成Issueの場合は、Claudeが保存したノートファイルからReleaseを自動作成/更新する
+      - name: Create or Update Release (release-note issues)
+        if: |
+          (github.event_name == 'issue_comment' || github.event_name == 'issues') &&
+          startsWith(github.event.issue.title, 'リリースノート生成:')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TITLE="${{ github.event.issue.title }}"
+          TAG_NAME="${TITLE#リリースノート生成: }"
+          TAG_NAME="$(echo "$TAG_NAME" | sed -E 's/^ +//; s/ +$//')"
+
+          echo "Release tag: $TAG_NAME"
+
+          # Claude側の出力ファイル名は揺れることがあるので、候補を順に探す
+          NOTES_CANDIDATES=(
+            "/tmp/release-notes-${TAG_NAME}.md"
+            "/tmp/release-notes-${TAG_NAME}.markdown"
+            "/tmp/release-notes.md"
+          )
+
+          NOTES_FILE=""
+          for f in "${NOTES_CANDIDATES[@]}"; do
+            if [[ -f "$f" ]]; then
+              NOTES_FILE="$f"
+              break
+            fi
+          done
+
+          if [[ -z "$NOTES_FILE" ]]; then
+            echo "ERROR: Release notes file not found. Looked for:"
+            printf '  - %s\n' "${NOTES_CANDIDATES[@]}"
+            exit 1
+          fi
+
+          echo "Using notes file: $NOTES_FILE"
+          ls -la "$NOTES_FILE"
+
+          RELEASE_TITLE="🎉 ${TAG_NAME}"
+          echo "Release title: $RELEASE_TITLE"
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" --title "$RELEASE_TITLE" --notes-file "$NOTES_FILE"
+          else
+            gh release create "$TAG_NAME" --title "$RELEASE_TITLE" --notes-file "$NOTES_FILE"
+          fi
+
+      # ★Issueからトリガーされた場合のみ、自動でPRを作成
+      # リリースノート生成用のIssueはPRを作成しない
+      - name: Create PR (if from issue)
+        if: |
+          github.event_name == 'issues' &&
+          !startsWith(github.event.issue.title, 'リリースノート生成')
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_ONIZUKA }}
+        run: |
+          # 環境変数でPR作成を制御
+          if [[ "${{ env.CREATE_AUTO_PR }}" != "true" ]]; then
+            echo "CREATE_AUTO_PR is not true. Skipping PR creation."
+            exit 0
+          fi
+
+          # スクリプトの実行（ローカル/リモート切り替え）
+          if [[ "${{ env.SOURCE_LOCATION }}" == "remote" ]]; then
+            if [[ -z "${{ env.SOURCE_URL }}" ]]; then
+              echo "ERROR: SOURCE_LOCATION=remote but SOURCE_URL is not set!"
+              exit 1
+            fi
+            echo "Downloading script from remote..."
+            curl -fsSL "${{ env.SOURCE_URL }}" -o /tmp/create-pr.py
+            python3 /tmp/create-pr.py \
+              "${{ steps.branch.outputs.name }}" \
+              "${{ github.event.issue.number }}"
+          else
+            echo "Using local script..."
+            python3 "${{ env.LOCAL_PATH }}" \
+              "${{ steps.branch.outputs.name }}" \
+              "${{ github.event.issue.number }}"
+          fi

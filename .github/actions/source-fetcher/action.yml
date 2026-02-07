@@ -1,0 +1,42 @@
+name: 'Source Fetcher'
+description: 'Fetch content from local or remote source'
+
+inputs:
+  source-location:
+    description: 'Source location: local or remote'
+    required: false
+    default: 'remote'
+  source-url:
+    description: 'Remote URL (required when source-location=remote)'
+    required: false
+  local-path:
+    description: 'Local file path (required when source-location=local)'
+    required: true
+  output-path:
+    description: 'Output file path'
+    required: true
+
+outputs:
+  content:
+    description: 'Fetched content'
+    value: ${{ steps.fetch.outputs.content }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Fetch from source
+      id: fetch
+      shell: bash
+      run: |
+        if [[ "${{ inputs.source-location }}" == "remote" ]]; then
+          if [[ -z "${{ inputs.source-url }}" ]]; then
+            echo "ERROR: source-location=remote but source-url is not set!"
+            exit 1
+          fi
+          echo "Fetching from remote: ${{ inputs.source-url }}"
+          curl -fsSL "${{ inputs.source-url }}" -o "${{ inputs.output-path }}"
+        else
+          echo "Using local file: ${{ inputs.local-path }}"
+          cp "${{ inputs.local-path }}" "${{ inputs.output-path }}"
+        fi
+        echo "content=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"

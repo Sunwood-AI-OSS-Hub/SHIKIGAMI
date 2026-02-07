@@ -1,0 +1,311 @@
+name: Auto Release Notes
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'V*.*.*'
+
+# 同じタグでは同時に走らないようにする
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  FAL_KEY: ${{ secrets.FAL_KEY }}
+  HEADER_MODE: ${{ vars.HEADER_MODE || 'svg' }}  # fal or svg
+  SOURCE_LOCATION: ${{ vars.SOURCE_LOCATION || 'remote' }}  # ソースのロケーション: local または remote
+  SOURCE_URL: ${{ vars.SOURCE_URL || 'https://raw.githubusercontent.com/Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox/refs/heads/main/.github/scripts/generate-header.py' }}
+  LOCAL_PATH: '.github/scripts/generate-header.py'
+
+jobs:
+  generate-header:
+    name: Generate Header Image 🎨
+    runs-on: ubuntu-latest
+    outputs:
+      header-path: ${{ steps.generate.outputs.header-path }}
+      header-ext: ${{ steps.generate.outputs.header-ext }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install fal-client
+        run: |
+          pip install fal-client
+
+      - name: Get tag info
+        id: tag-info
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Detected tag: ${TAG}"
+
+      - name: Generate header image 🐱
+        id: generate
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          SOURCE_LOCATION: ${{ vars.SOURCE_LOCATION || 'remote' }}
+          SOURCE_URL: ${{ vars.SOURCE_URL || 'https://raw.githubusercontent.com/Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox/refs/heads/main/.github/scripts/generate-header.py' }}
+          HEADER_MODE: ${{ vars.HEADER_MODE || 'svg' }}
+        run: |
+          HEADER_DIR="./assets/release-headers"
+          mkdir -p "${HEADER_DIR}"
+
+          # HEADER_MODE に応じて拡張子とモードを設定
+          # GitHub Variables で "SVG" など大文字になることがあるので正規化する
+          HEADER_MODE_NORM="$(printf '%s' "${HEADER_MODE:-}" | tr '[:upper:]' '[:lower:]' | tr -d '\r\n\t ' )"
+          echo "HEADER_MODE(raw)='${HEADER_MODE:-}' normalized='${HEADER_MODE_NORM}'"
+
+          if [ "$HEADER_MODE_NORM" = "svg" ] || [ "$HEADER_MODE_NORM" = "vector" ]; then
+            HEADER_EXT="svg"
+            MODE_ARG="--format svg"
+            echo "🎨 Using SVG vector mode..."
+          else
+            HEADER_EXT="png"
+            MODE_ARG=""
+            echo "🖼️ Using fal.ai PNG mode..."
+          fi
+
+          HEADER_PATH="${HEADER_DIR}/header-${{ steps.tag-info.outputs.tag }}.${HEADER_EXT}"
+
+          # SOURCE_LOCATIONでローカル/リモートを切り替えニャ！🐱
+          if [ "$SOURCE_LOCATION" = "local" ]; then
+            # ローカルスクリプトを実行
+            echo "📁 Using local script..."
+            python3 .github/scripts/generate-header.py \
+              --tag "${{ steps.tag-info.outputs.tag }}" \
+              --theme auto \
+              ${MODE_ARG} \
+              --output "${HEADER_PATH}"
+          else
+            # リモートスクリプトを実行（デフォルト）
+            echo "🌐 Using remote script..."
+            curl -s "${SOURCE_URL}" \
+              | python3 - --tag "${{ steps.tag-info.outputs.tag }}" --theme auto ${MODE_ARG} --output "${HEADER_PATH}"
+          fi
+
+          echo "header-path=${HEADER_PATH}" >> "$GITHUB_OUTPUT"
+          echo "header-ext=${HEADER_EXT}" >> "$GITHUB_OUTPUT"
+          echo "✅ Header image generated: ${HEADER_PATH}"
+
+      - name: Upload header artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-header
+          path: ${{ steps.generate.outputs.header-path }}
+          retention-days: 30
+
+      - name: Commit and push header image 🐱
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HEADER_PATH="${{ steps.generate.outputs.header-path }}"
+          BRANCH_NAME="header-${{ steps.tag-info.outputs.tag }}"
+
+          # Git設定
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # ブランチを作成してチェックアウト
+          git checkout -b "${BRANCH_NAME}"
+
+          # ヘッダー画像をコミット
+          git add "${HEADER_PATH}"
+          git commit -m "chore: add header image for ${{ steps.tag-info.outputs.tag }} 🐱"
+
+          # プッシュ
+          git push origin "${BRANCH_NAME}"
+
+          echo "✅ Header image committed and pushed: ${HEADER_PATH}"
+
+  create-issue:
+    name: Create Release Note Request
+    runs-on: ubuntu-latest
+    needs: generate-header
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                    # 全履歴を取得
+
+      - name: Get previous tag
+        id: prev-tag
+        shell: bash
+        run: |
+          # タグ名を取得（v/ V プレフィックスを除去）
+          CURRENT_TAG="${{ github.ref_name }}"
+          CURRENT_VERSION="${CURRENT_TAG#v}"
+          CURRENT_VERSION="${CURRENT_VERSION#V}"
+
+          echo "current_tag=${CURRENT_TAG}" >> "$GITHUB_OUTPUT"
+          echo "current_version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+
+          # 前回のタグを取得
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "previous_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+            echo "Found previous tag: ${PREV_TAG}"
+          else
+            echo "previous_tag=" >> "$GITHUB_OUTPUT"
+            echo "No previous tag found (first release)"
+          fi
+
+      - name: Get code diff
+        shell: bash
+        run: |
+          # 前回のタグがある場合は差分を取得
+          if [ -n "${{ steps.prev-tag.outputs.previous_tag }}" ]; then
+            echo "Getting diff from ${{ steps.prev-tag.outputs.previous_tag }} to ${{ steps.prev-tag.outputs.current_tag }}..."
+            git diff ${{ steps.prev-tag.outputs.previous_tag }}..${{ steps.prev-tag.outputs.current_tag }} --stat > /tmp/diff-stat.txt
+            git diff ${{ steps.prev-tag.outputs.previous_tag }}..${{ steps.prev-tag.outputs.current_tag }} > /tmp/diff.txt
+            git diff --name-only ${{ steps.prev-tag.outputs.previous_tag }}..${{ steps.prev-tag.outputs.current_tag }} > /tmp/changed-files.txt
+          else
+            echo "Getting all files for first release..."
+            git ls-files > /tmp/changed-files.txt
+            echo "No diff available for first release" > /tmp/diff-stat.txt
+            echo "First release - no diff" > /tmp/diff.txt
+          fi
+
+          echo "=== Changed Files ==="
+          cat /tmp/changed-files.txt
+          echo ""
+          echo "=== Diff Stat ==="
+          cat /tmp/diff-stat.txt
+
+      - name: Create issue for release notes
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_ONIZUKA }}
+          HEADER_EXT: ${{ needs.generate-header.outputs.header-ext || 'png' }}
+        run: |
+          # IMPORTANT:
+          # If GH_PAT_ONIZUKA is missing/empty, gh CLI will silently fall back to GITHUB_TOKEN.
+          # Events caused by GITHUB_TOKEN do not trigger other workflows, so @claude won't run.
+          if [ -z "${{ secrets.GH_PAT_ONIZUKA }}" ]; then
+            echo "ERROR: secrets.GH_PAT_ONIZUKA is not set (or empty)."
+            echo "Set GH_PAT_ONIZUKA to a PAT (classic) with repo scope (at least Issues) to allow downstream workflow triggers."
+            exit 1
+          fi
+
+          # Force gh CLI to use the PAT, not the ephemeral GITHUB_TOKEN.
+          unset GITHUB_TOKEN
+          export GH_TOKEN="${{ secrets.GH_PAT_ONIZUKA }}"
+
+          TITLE="リリースノート生成: ${{ steps.prev-tag.outputs.current_tag }}"
+
+          # diffが大きい場合は制限
+          DIFF_SIZE=$(wc -c < /tmp/diff.txt)
+          if [ $DIFF_SIZE -gt 100000 ]; then
+            head -c 100000 /tmp/diff.txt > /tmp/diff-truncated.txt
+            echo "" >> /tmp/diff-truncated.txt
+            echo "... (diff is truncated due to size, see full diff in repository)" >> /tmp/diff-truncated.txt
+            mv /tmp/diff-truncated.txt /tmp/diff.txt
+          fi
+
+          # Issue本文テンプレートを作成（一重引用符で囲んで変数展開を防ぐ）
+          cat > /tmp/issue-template.md << 'TEMPLATEEOF'
+          リリースノートを生成してください。
+
+          ## リリース情報
+          - タグ名: `__CURRENT_TAG__`
+          - バージョン: `__CURRENT_VERSION__`
+          - 前回のタグ: `__PREVIOUS_TAG__`
+
+          ## 🎨 ヘッダー画像
+
+          ![Header Image](https://raw.githubusercontent.com/Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox/header-__CURRENT_TAG__/assets/release-headers/header-__CURRENT_TAG__.__HEADER_EXT__)
+
+          ## 変更されたファイル
+
+          ```
+          __CHANGED_FILES__
+          ```
+
+          ## 変更統計
+
+          ```
+          __DIFF_STAT__
+          ```
+
+          ## コード差分
+
+          ```diff
+          __DIFF_CONTENT__
+          ```
+
+          ---
+
+          琴音（コトネ）キャラクターで、美しいリリースノートを紡いでください。
+
+          ## 📝 リリースノート作成の指示
+
+          - **冒頭にヘッダー画像とタイトルを必ず入れてください（どちらも中央揃え）**:
+            ```html
+            <div align="center">
+              <img src="https://raw.githubusercontent.com/Sunwood-AI-OSS-Hub/claude-glm-actions-lab-sandbox/header-__CURRENT_TAG__/assets/release-headers/header-__CURRENT_TAG__.__HEADER_EXT__" alt="Header Image" />
+            </div>
+            <div align="center">
+              <h2>__CURRENT_TAG__ リリースノート</h2>
+            </div>
+            ```
+          - **ヘッダー画像とタイトルの間に区切り線（`---` / `***`）は不要です**
+          - 琴音（コトネ）のキャラクターとして、文学的で丁寧な言葉遣いでリリースノートを書いてください
+
+          ## ✅ 出力ファイル（必須）
+
+          - 生成した Release 本文は必ず次のファイルに保存してください:
+            - `/tmp/release-notes-__CURRENT_TAG__.md`
+          - このワークフローが `--notes-file` で GitHub Release を自動作成/更新するため、**あなたは `gh release create/edit` を実行しないでください**
+
+          ## 🚨 重要: Release 作成のルール
+
+          - Release の本文は必ずファイルに保存して `--notes-file` で渡してください（`--notes` / `$(cat ...)` / heredoc で本文をコマンドに埋め込まない）
+          - Issue コメントには長いコマンド例は貼らず、Release URL と要点だけを報告してください
+          TEMPLATEEOF
+
+          # タグ情報のプレースホルダーを置換（値を直接埋め込み）
+          sed -i "s|__CURRENT_TAG__|${{ steps.prev-tag.outputs.current_tag }}|g" /tmp/issue-template.md
+          sed -i "s|__CURRENT_VERSION__|${{ steps.prev-tag.outputs.current_version }}|g" /tmp/issue-template.md
+          sed -i "s|__PREVIOUS_TAG__|${{ steps.prev-tag.outputs.previous_tag }}|g" /tmp/issue-template.md
+          sed -i "s|__HEADER_EXT__|${HEADER_EXT}|g" /tmp/issue-template.md
+
+          # ファイル内容を埋め込み（r コマンドを使用）
+          # これらのファイルには GitHub Actions 式のような文字列や `` ` `` などの特殊文字が含まれる可能性があるが、
+          # ファイルから読み込むのでシェル変数展開の影響を受けない
+          sed -i "/__CHANGED_FILES__/r /tmp/changed-files.txt" /tmp/issue-template.md
+          sed -i "/__CHANGED_FILES__/d" /tmp/issue-template.md
+
+          sed -i "/__DIFF_STAT__/r /tmp/diff-stat.txt" /tmp/issue-template.md
+          sed -i "/__DIFF_STAT__/d" /tmp/issue-template.md
+
+          sed -i "/__DIFF_CONTENT__/r /tmp/diff.txt" /tmp/issue-template.md
+          sed -i "/__DIFF_CONTENT__/d" /tmp/issue-template.md
+
+          # Issueを作成（--body-file を使用して、シェルのメタ文字展開を回避）
+          ISSUE_URL=$(gh issue create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "$TITLE" \
+            --body-file /tmp/issue-template.md)
+
+          echo "✅ Issue created: $ISSUE_URL"
+
+          # Trigger Claude via comment to avoid issues:opened mode quirks and prevent double-trigger.
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+          gh issue comment \
+            --repo "${GITHUB_REPOSITORY}" \
+            "$ISSUE_NUMBER" \
+            --body "@claude"
+
+          echo "✅ @claude comment added to trigger responder"
