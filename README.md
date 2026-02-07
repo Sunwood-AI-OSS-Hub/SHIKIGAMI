@@ -213,6 +213,52 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## shikigami_hello
+
+A minimal Python CLI greeting application.
+
+### Usage
+
+```bash
+# Default greeting
+python -m shikigami_hello
+# Output: Hello, world
+
+# Greet by name
+python -m shikigami_hello --name Alice
+# Output: Hello, Alice
+
+# Short flag
+python -m shikigami_hello -n Bob
+# Output: Hello, Bob
+
+# Show help
+python -m shikigami_hello --help
+
+# Show version
+python -m shikigami_hello --version
+```
+
+### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--name` | `-n` | Name to greet | `world` |
+| `--help` | `-h` | Show help message | - |
+| `--version` | `-V` | Show version | - |
+
+### Testing
+
+```bash
+# Run tests
+pytest
+
+# Run with verbose output
+pytest -v
+```
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
