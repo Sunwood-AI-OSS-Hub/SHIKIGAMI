@@ -213,6 +213,67 @@ GitHubリポジトリの **Settings > Variables and secrets > Actions** で：
 
 ---
 
+## Dice CLI (shikigami_dice_simple)
+
+### Overview
+
+A simple dice rolling CLI application written in Python. Roll 1-6 sided dice with optional reproducibility.
+
+### Installation
+
+No installation required - uses Python standard library only.
+
+### Usage
+
+```bash
+# Single roll (default)
+python -m shikigami_dice_simple
+
+# Multiple rolls
+python -m shikigami_dice_simple --rolls 3
+
+# With seed for reproducibility
+python -m shikigami_dice_simple --rolls 5 --seed 42
+
+# Short options
+python -m shikigami_dice_simple -r 10 -s 123
+```
+
+### Options
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--rolls K` | `-r K` | Number of times to roll the dice | 1 |
+| `--seed S` | `-s S` | Seed for random number generation | None |
+
+### Output
+
+Results are printed as space-separated values on a single line:
+
+```bash
+$ python -m shikigami_dice_simple --rolls 3
+4 2 6
+```
+
+### Validation
+
+- `--rolls` must be >= 1 (exits with code 2 and shows usage if invalid)
+
+### Testing
+
+Run tests with pytest:
+
+```bash
+pytest tests/test_dice.py -v
+```
+
+Tests cover:
+- Seed determinism (same seed produces same results)
+- Rolls validation (invalid values rejected)
+- Default behavior
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
