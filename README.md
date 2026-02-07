@@ -219,6 +219,58 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+---
+
+## shikigami_coin - コイントスCLI
+
+シンプルなコイントス（coin flip）CLIアプリケーション。
+
+### 使い方
+
+```bash
+# 基本使い方（1回トス）
+python -m shikigami_coin
+
+# 複数回トス
+python -m shikigami_coin --flips 5
+
+# シードを指定（再現可能な結果）
+python -m shikigami_coin --flips 10 --seed 42
+
+# JSON形式で出力
+python -m shikigami_coin --flips 3 --format json
+```
+
+### オプション
+
+| オプション | 説明 | デフォルト値 |
+|-----------|-------------|-------------|
+| `--flips K` | トスする回数 | `1` |
+| `--seed S` | 乱数シード（再現性あり） | なし |
+| `--format` | 出力フォーマット（`text` or `json`） | `text` |
+
+### 出力例
+
+**テキストモード（デフォルト）:**
+```
+heads tails heads tails
+```
+
+**JSONモード:**
+```json
+{
+  "results": ["heads", "tails", "heads"]
+}
+```
+
+### テスト
+
+```bash
+pytest tests/test_coin.py
+```
+
+---
+
 ## Test
 
 This is a test PR to verify the auto review comment feature.
