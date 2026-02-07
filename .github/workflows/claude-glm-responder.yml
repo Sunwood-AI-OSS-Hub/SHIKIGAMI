@@ -105,6 +105,8 @@ jobs:
             --append-system-prompt "【協調要件（必須）】teammates 同士が最低1往復以上は直接やりとりし、相互にツッコミ/補足してから統合してください。teammates 間の直接やりとり要約を必ず出してください（誰が誰に何を言ったかを短く）。"
             --append-system-prompt "【出力フォーマット（コメント先頭に必須。ここも日本語のみ）】Agent Teams 使用: はい/いいえ。teammateMode: in-process。スポーンした teammates: 役割 + 人数。証拠: teammates 間の直接やりとり要約。共有タスクリスト: 誰が何を担当し完了したか。"
             --append-system-prompt "その後に、実装内容の概要・変更ファイル・テスト結果を日本語で簡潔に書いてください。"
+            --append-system-prompt "【終了条件】タスクが完了したら、最後に「エージェントチームを解散した」ことを明記してください。"
+            --append-system-prompt "【追加指示】現時点ではユーザーから追加の指示はありません。追加対応は、ユーザーから新たな指示が来た場合にのみ行ってください。"
 
         env:
           # Agent Teams (Experimental): CI では tmux が使えないので in-process を強制
