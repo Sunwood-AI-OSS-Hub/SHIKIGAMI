@@ -96,10 +96,16 @@ jobs:
           # ★追加：バリデーション通過用に必要
           anthropic_api_key: ${{ secrets.ZAI_API_KEY }}
 
+          # 日本語固定（Issue/PR コメントの出力言語が英語に寄りがちなため強制）
+          claude_args: |
+            --system-prompt "あなたは必ず日本語で回答してください。英語での説明・見出し・箇条書きは禁止です（ただし、コードブロック内のコード、コマンド、ファイルパス、固有名詞はそのままで構いません）。チームメンバー間のやりとり要約も日本語で書いてください。"
+
         env:
           # Agent Teams (Experimental): CI では tmux が使えないので in-process を強制
           CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1"
           teammateMode: "in-process"
+          LANG: "ja_JP.UTF-8"
+          LC_ALL: "ja_JP.UTF-8"
           # GLMに向ける設定
           ANTHROPIC_BASE_URL: https://api.z.ai/api/anthropic
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ZAI_API_KEY }}
